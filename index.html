@@ -85,7 +85,7 @@ legend.fs { font-family: var(--font-display); font-weight: 600; font-size: 0.8re
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 label.f { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; color: var(--muted); min-width: 0; }
-input[type="number"], select { width: 100%; font-size: 0.95rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-2); color: var(--fg); min-width: 0; font-family: var(--font-body); }
+input[type="number"], input[type="text"], select { width: 100%; font-size: 0.95rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-2); color: var(--fg); min-width: 0; font-family: var(--font-body); }
 input[type="number"] { font-family: var(--font-data); }
 input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .chk { display: flex; gap: 8px; align-items: flex-start; font-size: 0.85rem; color: var(--fg); cursor: pointer; }
@@ -191,6 +191,13 @@ pre.report { font-family: var(--font-data); font-size: 0.8rem; line-height: 1.55
 
 @media (prefers-reduced-motion: no-preference) { .seg, .bar { transition: left 0.25s ease, width 0.25s ease; } }
 
+.printwrap, .printwrap > tbody, .printwrap > tbody > tr, .printwrap > tbody > tr > td { display: block; min-width: 0; width: auto; padding: 0; border: 0; }
+.printwrap > thead, .printwrap > tfoot { display: none; }
+.doc-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 8px 24px; }
+.ptid { font-family: var(--font-body); font-size: 0.88rem; display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.ptid span { color: var(--muted); }
+.ptid b { font-weight: 600; color: var(--fg); }
+
 /* Print: handout only, light colors, no app chrome */
 @media print {
   :root { --bg: #fff; --paper: #fff; --fg: #000; --muted: #444; --line: #bbb; --accent: #1d4d78; --accent-soft: #eef3f8; --mod: #1d6b4f; --mod-bg: #e9f5ef; --heavy: #8a5508; --heavy-bg: #fbf1df; --sev: #942f28; --sev-bg: #f9e8e6; color-scheme: light; }
@@ -211,7 +218,16 @@ pre.report { font-family: var(--font-data); font-size: 0.8rem; line-height: 1.55
   .zcard dl { font-size: 9.5pt; gap: 1px 10px; }
   .callout { font-size: 9pt; padding: 6px 10px; }
   .zcard, .phase { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  @page { size: letter; margin: 11mm 13mm; }
+  @page { size: letter; margin: 0; }
+  .wrap { padding: 0 13mm !important; }
+  .printwrap { display: table; width: 100%; border-collapse: collapse; }
+  .printwrap > thead { display: table-header-group; }
+  .printwrap > tfoot { display: table-footer-group; }
+  .printwrap > tbody { display: table-row-group; }
+  .printwrap tr { display: table-row; }
+  .printwrap td { display: table-cell; padding: 0; border: 0; }
+  .pspace { height: 11mm; }
+  .ptid { font-size: 9pt; }
   .sheet { font-size: 9pt; line-height: 1.3; gap: 7px; }
   .sheet h2 { font-size: 9.5pt; padding-bottom: 2px; margin-bottom: 3px; }
   .sheet .doc-title { font-size: 14pt; }
@@ -253,6 +269,11 @@ pre.report { font-family: var(--font-data); font-size: 0.8rem; line-height: 1.55
       <fieldset>
         <legend class="fs">Patient</legend>
         <div class="grid2">
+          <label class="f">Name<input type="text" id="ptName" maxlength="80" autocomplete="off" spellcheck="false"></label>
+          <label class="f">MRN<input type="text" id="ptMrn" maxlength="20" autocomplete="off" spellcheck="false"></label>
+        </div>
+        <p class="hint">Name and MRN appear only on the printout. They are not saved or sent anywhere and clear after printing.</p>
+        <div class="grid2">
           <label class="f">Age, years<input type="number" id="age" step="1" min="18" max="100" inputmode="numeric"></label>
           <label class="f">Sex<select id="sex"><option value="female">Female</option><option value="male">Male</option></select></label>
         </div>
@@ -268,13 +289,18 @@ pre.report { font-family: var(--font-data); font-size: 0.8rem; line-height: 1.55
         <div class="grid3">
           <label class="f">AT HR<input type="number" id="vt1Hr" step="1" inputmode="numeric"></label>
           <label class="f">AT VO2<input type="number" id="vt1Vo2" step="0.1" inputmode="decimal"></label>
-          <label class="f">RCP HR<input type="number" id="rcpHr" step="1" inputmode="numeric"></label>
         </div>
+        <p class="hint" id="vo2unit">VO2 in mL/kg/min.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend class="fs">Optional</legend>
         <div class="grid3">
+          <label class="f">RCP HR<input type="number" id="rcpHr" step="1" inputmode="numeric"></label>
           <label class="f">RPE at AT<input type="number" id="vt1Rpe" step="1" min="6" max="20" inputmode="numeric"></label>
           <label class="f">Peak RER<input type="number" id="rer" step="0.01" inputmode="decimal"></label>
         </div>
-        <p class="hint" id="vo2unit">VO2 in mL/kg/min. Leave RCP HR blank if RCP was not identified. RPE (Borg 6–20) and RER are optional.</p>
+        <p class="hint">Fill RCP HR only when the second breakpoint is obvious; otherwise leave it blank. The plan works without it. RPE is on the Borg 6–20 scale.</p>
       </fieldset>
 
       <fieldset>
@@ -379,7 +405,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function read() {
-  const d = { sex: $("sex").value };
+  const d = { sex: $("sex").value, ptName: $("ptName").value.trim(), ptMrn: $("ptMrn").value.trim() };
   NUMS.forEach(f => d[f] = num(f));
   d.phen = [...document.querySelectorAll('input[name="phen"]:checked')].map(e => e.value);
   return d;
@@ -480,7 +506,6 @@ function compute(d) {
   }
 
   r.perception = d.vt1Rpe == null ? null : (d.vt1Rpe < CONFIG.rpeUnder ? "under" : (d.vt1Rpe > CONFIG.rpeOver ? "over" : null));
-  if (!hasRcp) flags.push("No RCP HR entered: the interval zone has a floor but no ceiling. Intervals are capped by talk test.");
   if (r.perception === "under") flags.push(`RPE ${d.vt1Rpe} at AT is below the usual range (about 11 ± 2). Likely underperceiver: the handout tells the patient to go by HR and talk test, not feel.`);
   if (r.perception === "over") flags.push(`RPE ${d.vt1Rpe} at AT is above the usual range. Likely overperceiver: the handout reassures that the HR targets are safe even when they feel hard.`);
   if (r.bb) flags.push("Beta-blocker or chronotropic incompetence: HR targets hold only on the tested dose. The handout makes the talk test primary.");
@@ -546,7 +571,7 @@ function buildDoc(r) {
   } else if (d.vo2Peak != null) showed.push(`Your fitness (peak oxygen uptake) was ${d.vo2Peak} mL/kg/min.`);
   showed.push(`During the test, your body changed gear at a heart rate of ${d.vt1Hr}. Below that heart rate you can exercise steadily for a long time. Above it, effort and breathing climb quickly. Your plan is built around that number.`);
   if (r.fr && !r.fr.above90) showed.push("Fitness is one of the strongest predictors of long-term health, and the biggest gains come from moving up from the lowest levels.");
-  showed.push("A doctor will review all of your test results and send you a full report. This plan is built from measurements that do not depend on that review, so you can start it now.");
+  showed.push("Your full test will be read by a physician, and the report will be in your medical record. Your referring provider will go over the results with you. You can start this plan now.");
   S.push({ h: "What your test showed", paras: showed });
 
   const zones = [];
@@ -627,8 +652,10 @@ function buildDoc(r) {
 }
 
 /* ---------- Renderers ---------- */
-function docHTML(doc) {
-  let h = `<div><div class="doc-title">${esc(doc.title)}</div><div class="doc-sub">${esc(doc.sub)}</div></div>`;
+function docHTML(doc, id) {
+  const nm = id && id.name ? `<b>${esc(id.name)}</b>` : "______________________________";
+  const mrn = id && id.mrn ? `<b>${esc(id.mrn)}</b>` : "________________";
+  let h = `<div class="doc-head"><div><div class="doc-title">${esc(doc.title)}</div><div class="doc-sub">${esc(doc.sub)}</div></div><div class="ptid"><div><span>Name</span> ${nm}</div><div><span>MRN</span> ${mrn}</div></div></div>`;
   doc.sections.forEach(s => {
     const cls = [s.stop ? "stop" : "", s.cols ? "cols2" : ""].filter(Boolean).join(" ");
     h += `<section${cls ? ` class="${cls}"` : ""}><h2>${esc(s.h)}</h2>`;
@@ -701,7 +728,7 @@ function clinText(r) {
   if (r.vt1Ss != null) a += `, ${d.vt1W} W ramp / ~${r.vt1Ss} W steady-state`;
   if (d.vt1Rpe != null) a += `, RPE ${d.vt1Rpe}`;
   L.push(a + ".");
-  L.push(r.hasRcp ? `RCP: HR ${d.rcpHr}${r.rcpSs != null ? `, ${d.rcpW} W ramp / ~${r.rcpSs} W steady-state` : ""}.` : "RCP: not identified.");
+  L.push(r.hasRcp ? `RCP: HR ${d.rcpHr}${r.rcpSs != null ? `, ${d.rcpW} W ramp / ~${r.rcpSs} W steady-state` : ""}.` : "RCP: not entered.");
   L.push(`Steady zone: HR ${r.modLo}-${r.modHi}${r.walkMod ? `, walking ${r.walkMod.short}` : ""}${r.vt1Ss != null ? `, cycle up to ${r.vt1Ss} W` : ""}, talk test full sentences.`);
   L.push(`Interval zone: HR ${r.hasRcp ? `${r.intLo}-${r.intHi}` : `above ${d.vt1Hr}`}${r.walkInt ? `, walking ${r.walkInt.short}` : ""}${r.bikeIntLo != null ? `, cycle ${r.bikeIntLo}-${r.rcpSs} W` : ""}, talk test short phrases.`);
   L.push(`AT and RCP selected at time of test, before physician interpretation. Reissue if AT HR is revised by more than ${CONFIG.atRevise} bpm.`);
@@ -822,7 +849,7 @@ function render() {
         <span class="hint">Plain text is for the after-visit summary.</span><span class="copied" id="copiedPt" hidden></span>
       </div>
       <details class="plain" id="ptDetails"><summary>Show plain text</summary><pre class="report" id="ptPre">${esc(lastPatientText)}</pre></details>
-      <article class="sheet">${docHTML(doc)}</article>`;
+      <table class="printwrap" role="presentation"><thead><tr><td><div class="pspace"></div></td></tr></thead><tfoot><tr><td><div class="pspace"></div></td></tr></tfoot><tbody><tr><td><article class="sheet">${docHTML(doc, { name: r.d.ptName, mrn: r.d.ptMrn })}</article></td></tr></tbody></table>`;
     $("pane-clin").innerHTML = clinHTML(r);
     $("btnCopyPt").addEventListener("click", () => copyText(lastPatientText, "ptPre", "copiedPt", "ptDetails"));
     if (!inFrame) $("btnPrint").addEventListener("click", () => window.print());
@@ -833,11 +860,12 @@ function render() {
 
 $("pane-ev").innerHTML = evidenceHTML();
 ["patient", "clin", "ev"].forEach(k => $("tab-" + k).addEventListener("click", () => setTab(k)));
-$("form").addEventListener("input", () => { isExample = false; render(); });
+$("form").addEventListener("input", (e) => { if (e.target.id !== "ptName" && e.target.id !== "ptMrn") isExample = false; render(); });
+window.addEventListener("afterprint", () => { $("ptName").value = ""; $("ptMrn").value = ""; render(); });
 $("form").addEventListener("change", () => render());
 $("form").addEventListener("submit", (e) => e.preventDefault());
 $("btnExample").addEventListener("click", () => { fill(EXAMPLE); isExample = true; render(); });
-$("btnClear").addEventListener("click", () => { fill({ sex: "female", phen: [] }); isExample = false; render(); });
+$("btnClear").addEventListener("click", () => { fill({ sex: "female", phen: [] }); $("ptName").value = ""; $("ptMrn").value = ""; isExample = false; render(); });
 if (location.hash === "#evidence") activeTab = "ev";
 fill(EXAMPLE); isExample = true; render();
 </script>
