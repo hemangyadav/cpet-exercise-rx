@@ -253,7 +253,7 @@ pre.report { font-family: var(--font-data); font-size: 0.8rem; line-height: 1.55
 <div class="wrap">
   <header class="top">
     <div>
-      <div class="eyebrow">CPET lab · draft for testing</div>
+      <div class="eyebrow">Pulmonary Exercise Lab</div>
       <h1>CPET Exercise Prescription</h1>
       <p>Turns a ramp CPET into a patient's own training zones, a staged plan, and a handout. The Evidence tab shows what each element rests on.</p>
     </div>
@@ -831,7 +831,15 @@ function setTab(t) {
 }
 
 function render() {
-  const r = compute(read());
+  const d0 = read();
+  if (d0.hrRest == null && d0.hrPeak == null && d0.vt1Hr == null) {
+    $("flagbox").innerHTML = "";
+    $("pane-patient").innerHTML = `<section class="panel"><h2>No test values yet</h2><p style="margin:8px 0 0;max-width:60ch">Enter resting HR, peak HR, and HR and VO2 at AT on the left. The prescription builds as you type. To see a finished example, use Load example.</p></section>`;
+    $("pane-clin").innerHTML = `<p class="hint">Enter test values to see the zone table and report text.</p>`;
+    setTab(activeTab);
+    return;
+  }
+  const r = compute(d0);
   if (r.errs) {
     $("flagbox").innerHTML = `<div class="flags">${r.errs.map(e => `<div class="flag err">${esc(e)}</div>`).join("")}</div>`;
     $("pane-patient").innerHTML = `<p class="hint">Resting HR, peak HR and HR at AT are enough to start. Load the example to see a finished prescription.</p>`;
@@ -867,7 +875,7 @@ $("form").addEventListener("submit", (e) => e.preventDefault());
 $("btnExample").addEventListener("click", () => { fill(EXAMPLE); isExample = true; render(); });
 $("btnClear").addEventListener("click", () => { fill({ sex: "female", phen: [] }); $("ptName").value = ""; $("ptMrn").value = ""; isExample = false; render(); });
 if (location.hash === "#evidence") activeTab = "ev";
-fill(EXAMPLE); isExample = true; render();
+fill({ sex: "female", phen: [] }); render();
 </script>
 
 </body>
