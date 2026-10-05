@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>CPET Exercise Prescription</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: short clinician form on the left; output on the right in three tabs.
+   The patient prescription is a handout sheet (prints alone via @media print when hosted outside the artifact viewer).
+   Intensity domains carry fixed semantic colors (steady/moderate, interval/heavy, too hard/severe). */
+:root {
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --surface-2: #f6f8fa;
+  --paper: #fffefb;
+  --fg: #16202a;
+  --muted: #586776;
+  --line: #d6dde4;
+  --accent: #1d4d78;
+  --accent-soft: #e2ebf4;
+  --mod: #23805f;
+  --mod-bg: #dcf0e7;
+  --heavy: #b36f0c;
+  --heavy-bg: #f9ebd2;
+  --sev: #b03f36;
+  --sev-bg: #f6dfdc;
+  --warn-fg: #7a5300;
+  --warn-bg: #fff3d1;
+  --err-fg: #8e2a22;
+  --err-bg: #fbe3e0;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-read: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151b; --surface: #172029; --surface-2: #1c2731; --paper: #1a232c; --fg: #e3e9ef; --muted: #98a7b5; --line: #2c3a47;
+    --accent: #8fb9e3; --accent-soft: #1f3143;
+    --mod: #5cc79d; --mod-bg: #15372b; --heavy: #e9ab4c; --heavy-bg: #3a2a10; --sev: #ec8279; --sev-bg: #3d1d1a;
+    --warn-fg: #f2cf7a; --warn-bg: #3a2f10; --err-fg: #f3a39b; --err-bg: #3d1d1a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151b; --surface: #172029; --surface-2: #1c2731; --paper: #1a232c; --fg: #e3e9ef; --muted: #98a7b5; --line: #2c3a47;
+  --accent: #8fb9e3; --accent-soft: #1f3143;
+  --mod: #5cc79d; --mod-bg: #15372b; --heavy: #e9ab4c; --heavy-bg: #3a2a10; --sev: #ec8279; --sev-bg: #3d1d1a;
+  --warn-fg: #f2cf7a; --warn-bg: #3a2f10; --err-fg: #f3a39b; --err-bg: #3d1d1a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1280px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: 1.7rem; font-weight: 700; }
+h2 { font-size: 1.12rem; font-weight: 600; }
+h3 { font-size: 0.98rem; font-weight: 600; }
+.num, input[type="number"], .mono { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 2px solid var(--fg); margin-bottom: 20px; }
+header.top p { margin: 4px 0 0; color: var(--muted); max-width: 66ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.8rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.sw.mod { background: var(--mod); } .sw.heavy { background: var(--heavy); } .sw.sev { background: var(--sev); }
+
+.layout { display: grid; grid-template-columns: minmax(280px, 330px) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 940px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+form.rail { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+legend.fs { font-family: var(--font-display); font-weight: 600; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); padding: 0 0 6px; border-bottom: 1px solid var(--line); width: 100%; margin-bottom: 4px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+label.f { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; color: var(--muted); min-width: 0; }
+input[type="number"], select { width: 100%; font-size: 0.95rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-2); color: var(--fg); min-width: 0; font-family: var(--font-body); }
+input[type="number"] { font-family: var(--font-data); }
+input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chk { display: flex; gap: 8px; align-items: flex-start; font-size: 0.85rem; color: var(--fg); cursor: pointer; }
+.chk input { margin-top: 3px; accent-color: var(--accent); }
+.hint { font-size: 0.76rem; color: var(--muted); margin: 0; }
+details.opt summary { cursor: pointer; font-family: var(--font-display); font-weight: 600; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+details.opt[open] summary { margin-bottom: 10px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+button { font-family: var(--font-body); font-size: 0.85rem; font-weight: 500; padding: 7px 12px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+
+.out { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--line); }
+.tab { border: 0; border-bottom: 2px solid transparent; background: transparent; border-radius: 0; padding: 8px 14px; color: var(--muted); font-weight: 500; }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.copied { font-size: 0.8rem; color: var(--mod); }
+.flags { display: flex; flex-direction: column; gap: 8px; }
+.flag { font-size: 0.87rem; padding: 9px 12px; border-radius: 4px; background: var(--warn-bg); color: var(--warn-fg); border-left: 3px solid var(--warn-fg); }
+.flag.err { background: var(--err-bg); color: var(--err-fg); border-left-color: var(--err-fg); }
+.chip-ex { font-size: 0.78rem; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+details.plain { font-size: 0.85rem; }
+details.plain summary { cursor: pointer; color: var(--muted); margin-bottom: 8px; }
+
+/* Patient handout */
+.sheet { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 32px clamp(18px, 4vw, 44px); max-width: 820px; font-family: var(--font-read); font-size: 1.02rem; line-height: 1.6; display: flex; flex-direction: column; gap: 24px; }
+.sheet h2 { font-family: var(--font-display); font-size: 1.05rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 4px; margin-bottom: 10px; }
+.sheet .doc-title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; }
+.sheet .doc-sub { font-family: var(--font-body); color: var(--muted); font-size: 0.88rem; margin-top: 2px; }
+.sheet p { margin: 0 0 8px; max-width: 68ch; }
+.sheet ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; max-width: 70ch; }
+.zone-cards { display: flex; flex-direction: column; gap: 12px; }
+.zcard { border-radius: 4px; padding: 14px 16px; display: grid; grid-template-columns: 10.5rem minmax(0, 1fr); gap: 6px 18px; align-items: start; break-inside: avoid; }
+@media (max-width: 560px) { .zcard { grid-template-columns: minmax(0, 1fr); } }
+.zcard.mod { background: var(--mod-bg); } .zcard.heavy { background: var(--heavy-bg); } .zcard.sev { background: var(--sev-bg); }
+.zcard .zname { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; }
+.zcard.mod .zname, .zcard.mod .zhr { color: var(--mod); }
+.zcard.heavy .zname, .zcard.heavy .zhr { color: var(--heavy); }
+.zcard.sev .zname, .zcard.sev .zhr { color: var(--sev); }
+.zcard .zhr { font-family: var(--font-data); font-size: 1.45rem; font-weight: 600; line-height: 1.15; }
+.zcard .zhr small { display: block; font-family: var(--font-body); font-size: 0.72rem; font-weight: 500; color: var(--muted); }
+.zcard dl { margin: 0; display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 4px 12px; font-size: 0.95rem; }
+@media (max-width: 560px) { .zcard dl { grid-template-columns: minmax(0, 1fr); } .zcard dt { margin-top: 4px; } }
+.zcard dt { font-family: var(--font-body); font-size: 0.78rem; color: var(--muted); padding-top: 3px; }
+.zcard dd { margin: 0; }
+.phases { display: flex; flex-direction: column; gap: 12px; }
+.phase { border: 1px solid var(--line); border-radius: 4px; padding: 14px 16px; break-inside: avoid; }
+.phase .ph-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 6px; }
+.phase .ph-name { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; }
+.phase .ph-when { font-family: var(--font-body); font-size: 0.82rem; color: var(--muted); }
+.phase ul { gap: 4px; }
+.phase .next { font-family: var(--font-body); font-size: 0.88rem; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); color: var(--accent); }
+.callout { font-family: var(--font-body); font-size: 0.92rem; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 4px 4px 0; }
+.stop h2 { color: var(--sev); }
+
+/* Clinician panels */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-family: var(--font-data); font-size: 0.8rem; padding: 4px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); white-space: nowrap; }
+.scale { display: grid; grid-template-columns: 6.6rem minmax(0, 1fr); row-gap: 12px; column-gap: 12px; align-items: center; }
+.scale .lab { font-size: 0.78rem; color: var(--muted); line-height: 1.25; }
+.track { position: relative; height: 30px; }
+.track.thin { height: 34px; }
+.seg { position: absolute; top: 0; height: 30px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 0.78rem; font-weight: 600; overflow: hidden; white-space: nowrap; }
+.seg.mod { background: var(--mod-bg); color: var(--mod); border-bottom: 3px solid var(--mod); }
+.seg.heavy { background: var(--heavy-bg); color: var(--heavy); border-bottom: 3px solid var(--heavy); }
+.seg.sev { background: var(--sev-bg); color: var(--sev); border-bottom: 3px solid var(--sev); }
+.seg.unk { background: repeating-linear-gradient(135deg, var(--heavy-bg) 0 6px, var(--surface-2) 6px 12px); color: var(--heavy); border-bottom: 3px dashed var(--heavy); }
+.guide { position: absolute; top: -6px; bottom: -6px; width: 0; border-left: 1px dashed var(--muted); opacity: 0.6; }
+.bar { position: absolute; top: 4px; height: 12px; border-radius: 2px; }
+.bar.mod { background: var(--mod); } .bar.heavy { background: var(--heavy); }
+.bar-lab { position: absolute; top: 18px; font-family: var(--font-data); font-size: 0.72rem; color: var(--muted); white-space: nowrap; transform: translateX(-50%); }
+.axis { position: relative; height: 34px; }
+.tick { position: absolute; top: 0; transform: translateX(-50%); text-align: center; font-size: 0.72rem; color: var(--muted); line-height: 1.2; white-space: nowrap; }
+.tick b { display: block; font-family: var(--font-data); font-size: 0.8rem; color: var(--fg); font-weight: 500; }
+.tick.left { transform: none; text-align: left; } .tick.right { transform: translateX(-100%); text-align: right; }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 640px; }
+th { text-align: left; font-family: var(--font-display); font-weight: 600; font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--line); }
+td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.zone { font-family: var(--font-display); font-weight: 600; white-space: nowrap; }
+tr.mod td.zone { color: var(--mod); box-shadow: inset 3px 0 0 var(--mod); }
+tr.heavy td.zone { color: var(--heavy); box-shadow: inset 3px 0 0 var(--heavy); }
+tr.sev td.zone { color: var(--sev); box-shadow: inset 3px 0 0 var(--sev); }
+td .sub { display: block; font-size: 0.76rem; color: var(--muted); }
+pre.report { font-family: var(--font-data); font-size: 0.8rem; line-height: 1.55; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 14px; white-space: pre-wrap; word-break: break-word; margin: 0 0 10px; max-height: 520px; overflow: auto; }
+
+/* Evidence */
+.ev-row { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); gap: 6px 20px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.ev-row:first-child { padding-top: 0; }
+@media (max-width: 640px) { .ev-row { grid-template-columns: minmax(0, 1fr); } }
+.ev-row h3 { font-size: 0.95rem; }
+.ev-row .what { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+.ev-row p { margin: 0 0 6px; font-size: 0.9rem; max-width: 70ch; }
+.ev-row .refs { font-size: 0.8rem; color: var(--muted); display: flex; flex-direction: column; gap: 3px; }
+.ev-row .refs a { color: var(--accent); }
+.tag { display: inline-block; font-family: var(--font-display); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; padding: 2px 7px; border-radius: 3px; margin-top: 6px; }
+.tag.strong { background: var(--mod-bg); color: var(--mod); }
+.tag.mid { background: var(--heavy-bg); color: var(--heavy); }
+.tag.judg { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+
+@media (prefers-reduced-motion: no-preference) { .seg, .bar { transition: left 0.25s ease, width 0.25s ease; } }
+
+/* Print: handout only, light colors, no app chrome */
+@media print {
+  :root { --bg: #fff; --paper: #fff; --fg: #000; --muted: #444; --line: #bbb; --accent: #1d4d78; --accent-soft: #eef3f8; --mod: #1d6b4f; --mod-bg: #e9f5ef; --heavy: #8a5508; --heavy-bg: #fbf1df; --sev: #942f28; --sev-bg: #f9e8e6; color-scheme: light; }
+  body { background: #fff; font-size: 11pt; }
+  header.top, form.rail, .tabs, #flagbox, .toolbar, details.plain, #pane-clin, #pane-ev { display: none !important; }
+  .layout { display: block; }
+  .wrap { padding: 0; max-width: none; }
+  #pane-patient { display: block !important; }
+  .sheet { border: 0; padding: 0; max-width: none; gap: 10px; font-size: 9.5pt; line-height: 1.35; }
+  .sheet h2 { font-size: 10.5pt; margin-bottom: 4px; }
+  .sheet .doc-title { font-size: 16pt; }
+  .sheet p { margin-bottom: 4px; max-width: none; }
+  .sheet ul { gap: 2px; max-width: none; }
+  .zone-cards, .phases { gap: 6px; }
+  .zcard, .phase { padding: 8px 12px; }
+  .zcard { grid-template-columns: 8.5rem minmax(0, 1fr); }
+  .zcard .zhr { font-size: 14pt; }
+  .zcard dl { font-size: 9.5pt; gap: 1px 10px; }
+  .callout { font-size: 9pt; padding: 6px 10px; }
+  .zcard, .phase { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { margin: 14mm; }
+}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">CPET lab · draft for testing</div>
+      <h1>CPET Exercise Prescription</h1>
+      <p>Turns a ramp CPET into a patient's own training zones, a staged plan, and a handout. The Evidence tab shows what each element rests on.</p>
+    </div>
+    <div class="legend" aria-label="Legend">
+      <span><i class="sw mod"></i>Steady (below AT)</span>
+      <span><i class="sw heavy"></i>Interval (AT to RCP)</span>
+      <span><i class="sw sev"></i>Too hard (above RCP)</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <form class="rail" id="form" autocomplete="off">
+      <fieldset>
+        <legend class="fs">Patient</legend>
+        <div class="grid2">
+          <label class="f">Age, years<input type="number" id="age" step="1" min="18" max="100" inputmode="numeric"></label>
+          <label class="f">Sex<select id="sex"><option value="female">Female</option><option value="male">Male</option></select></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend class="fs">Cycle CPET</legend>
+        <div class="grid3">
+          <label class="f">Rest HR<input type="number" id="hrRest" step="1" inputmode="numeric"></label>
+          <label class="f">Peak HR<input type="number" id="hrPeak" step="1" inputmode="numeric"></label>
+          <label class="f">Peak VO2<input type="number" id="vo2Peak" step="0.1" inputmode="decimal" aria-describedby="vo2unit"></label>
+        </div>
+        <div class="grid3">
+          <label class="f">AT HR<input type="number" id="vt1Hr" step="1" inputmode="numeric"></label>
+          <label class="f">AT VO2<input type="number" id="vt1Vo2" step="0.1" inputmode="decimal"></label>
+          <label class="f">RCP HR<input type="number" id="rcpHr" step="1" inputmode="numeric"></label>
+        </div>
+        <div class="grid3">
+          <label class="f">RPE at AT<input type="number" id="vt1Rpe" step="1" min="6" max="20" inputmode="numeric"></label>
+          <label class="f">Peak RER<input type="number" id="rer" step="0.01" inputmode="decimal"></label>
+        </div>
+        <p class="hint" id="vo2unit">VO2 in mL/kg/min. Leave RCP HR blank if RCP was not identified. RPE (Borg 6–20) and RER are optional.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend class="fs">From the chart or the test</legend>
+        <label class="chk"><input type="checkbox" name="phen" value="bb" id="ph-bb"> Takes a beta-blocker</label>
+        <label class="chk"><input type="checkbox" name="phen" value="pots" id="ph-pots"> Known POTS diagnosis</label>
+        <label class="chk"><input type="checkbox" name="phen" value="obes" id="ph-obes"> BMI 30 or higher</label>
+        <label class="chk"><input type="checkbox" name="phen" value="desat" id="ph-desat"> SpO2 fell below 88% during the test</label>
+      </fieldset>
+
+      <fieldset>
+        <legend class="fs">Before issuing</legend>
+        <label class="chk"><input type="checkbox" id="safeOk"> Test ended without safety concerns</label>
+        <p class="hint">Do not issue if the test stopped for chest pain, ischemic ECG changes, significant arrhythmia, a fall or failure to rise in blood pressure, or a near-faint. Hold for physician review instead.</p>
+      </fieldset>
+
+      <details class="opt" id="bikeOpt">
+        <summary>Bike watts (optional)</summary>
+        <div class="grid2">
+          <label class="f">AT ramp W<input type="number" id="vt1W" step="1" inputmode="numeric"></label>
+          <label class="f">RCP ramp W<input type="number" id="rcpW" step="1" inputmode="numeric"></label>
+          <label class="f">Ramp, W/min<input type="number" id="ramp" step="1" min="1" inputmode="numeric"></label>
+          <label class="f">VO2 MRT, s<input type="number" id="mrt" step="5" min="0" inputmode="numeric"></label>
+        </div>
+        <p class="hint" style="margin-top:8px">Adds steady-state watts for patients who train on a bike with a power display.</p>
+      </details>
+
+      <div class="btns">
+        <button type="button" class="primary" id="btnExample">Load example</button>
+        <button type="button" id="btnClear">Clear</button>
+      </div>
+    </form>
+
+    <div class="out">
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab" role="tab" id="tab-patient" aria-selected="true">Patient prescription</button>
+        <button type="button" class="tab" role="tab" id="tab-clin" aria-selected="false">Clinician view</button>
+        <button type="button" class="tab" role="tab" id="tab-ev" aria-selected="false">Evidence</button>
+      </div>
+      <div id="flagbox"></div>
+      <div id="pane-patient"></div>
+      <div id="pane-clin" hidden></div>
+      <div id="pane-ev" hidden></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Tunable assumptions ---------- */
+const CONFIG = {
+  modBand: 10,        // steady target: AT HR minus this, up to AT HR
+  heavyLowFrac: 0.5,  // interval target starts this fraction of the way from AT HR to RCP HR
+  roundW: 5,
+  retestWeek: 12,
+  rpeUnder: 9,        // RPE at AT below this: likely underperceiver (Scherr 2013: RPE at LT 10.8 ± 1.8)
+  rpeOver: 14,        // RPE at AT above this: likely overperceiver
+  minRer: 1.05,       // below this peak RER, leave the fitness percentile off the handout (likely submaximal)
+  atRevise: 5,        // bpm: reissue if AT HR is revised by more than this at interpretation
+  defaultRamp: 15,    // W/min, used only if bike watts are entered without a ramp rate
+  defaultMrt: 45      // s
+};
+
+/* 2022 FRIEND cycle-ergometer reference standards, Table 3 (Kaminsky 2022), 10th to 90th percentile.
+   Copied from the lab's FRIEND cycle percentile calculator (v1.2). Published 10-year bands, no age interpolation. */
+const FRIEND_CYCLE = {
+  male: {
+    "20-29": [28.8, 34.5, 37.4, 40.8, 44.0, 48.3, 52.8, 57.0, 62.2],
+    "30-39": [19.1, 22.6, 25.7, 27.9, 30.2, 31.6, 35.5, 39.0, 50.5],
+    "40-49": [19.8, 21.9, 23.8, 25.4, 27.4, 29.0, 31.4, 35.1, 41.9],
+    "50-59": [17.2, 20.2, 22.0, 23.1, 24.5, 26.3, 28.4, 31.6, 37.1],
+    "60-69": [14.7, 17.5, 19.1, 20.7, 21.7, 23.3, 24.5, 27.0, 31.4],
+    "70-79": [11.0, 14.7, 16.0, 17.1, 18.3, 19.4, 20.6, 22.6, 26.2],
+    "80-89": [8.4, 9.7, 11.1, 12.2, 13.2, 14.6, 16.2, 17.3, 18.7]
+  },
+  female: {
+    "20-29": [18.8, 21.9, 25.6, 28.9, 31.6, 34.3, 37.5, 40.9, 46.0],
+    "30-39": [15.0, 17.0, 18.6, 19.9, 21.6, 22.9, 24.5, 27.0, 32.0],
+    "40-49": [13.7, 15.4, 16.6, 17.9, 18.8, 20.3, 21.8, 23.5, 27.3],
+    "50-59": [13.0, 14.3, 15.2, 16.1, 16.9, 17.8, 18.9, 20.4, 22.4],
+    "60-69": [12.2, 13.4, 14.2, 15.0, 15.7, 16.4, 17.4, 18.5, 20.3],
+    "70-79": [10.7, 12.0, 12.9, 13.6, 14.5, 15.0, 15.9, 16.8, 18.0],
+    "80-89": [7.8, 8.7, 9.4, 10.1, 10.9, 11.3, 12.9, 14.3, 18.1]
+  }
+};
+
+/* A typical referral for unexplained exertional dyspnea with a deconditioned pattern. Not a real patient. */
+const EXAMPLE = {
+  age: 48, sex: "female",
+  hrRest: 80, hrPeak: 162, vo2Peak: 15.0,
+  vt1Hr: 120, vt1Vo2: 9.5, rcpHr: 146, vt1Rpe: 12,
+  rer: 1.16, vt1W: null, rcpW: null, ramp: null, mrt: null,
+  safeOk: true, phen: []
+};
+
+
+const $ = (id) => document.getElementById(id);
+const NUMS = ["age","hrRest","hrPeak","vo2Peak","vt1Hr","vt1Vo2","rcpHr","vt1Rpe","rer","vt1W","rcpW","ramp","mrt"];
+let isExample = false;
+let activeTab = "patient";
+let lastPatientText = "", lastClinText = "";
+const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+
+const num = (id) => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : null; };
+const roundTo = (x, s) => Math.round(x / s) * s;
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+function read() {
+  const d = { sex: $("sex").value, safeOk: $("safeOk").checked };
+  NUMS.forEach(f => d[f] = num(f));
+  d.phen = [...document.querySelectorAll('input[name="phen"]:checked')].map(e => e.value);
+  return d;
+}
+function fill(d) {
+  $("sex").value = d.sex || "female";
+  $("safeOk").checked = !!d.safeOk;
+  NUMS.forEach(f => $(f).value = d[f] == null ? "" : d[f]);
+  document.querySelectorAll('input[name="phen"]').forEach(e => e.checked = (d.phen || []).includes(e.value));
+}
+
+/* ---------- FRIEND percentile ---------- */
+function friend(age, sex, vo2) {
+  if (age == null || vo2 == null || age < 20 || age > 89) return null;
+  const lo = Math.floor(age / 10) * 10, band = `${lo}-${lo + 9}`;
+  const t = FRIEND_CYCLE[sex][band];
+  let pct, text;
+  if (vo2 < t[0]) { pct = null; text = "below the 10th percentile"; }
+  else if (vo2 > t[8]) { pct = null; text = "above the 90th percentile"; }
+  else {
+    for (let i = 0; i < 8; i++) if (vo2 >= t[i] && vo2 <= t[i + 1]) { pct = 10 * (i + 1) + 10 * (vo2 - t[i]) / (t[i + 1] - t[i]); break; }
+    pct = Math.round(pct);
+    text = `${ordinal(pct)} percentile`;
+  }
+  return { band, pct, text, below10: vo2 < t[0], above90: vo2 > t[8], p50: t[4] };
+}
+function ordinal(n) { const m = n % 100; if (m >= 11 && m <= 13) return n + "th"; return n + ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th"); }
+
+/* ---------- Walking targets from VO2 (ACSM metabolic equations) ---------- */
+const MPH = 26.8224;
+function vo2AtHr(r, h) {
+  const d = r.d;
+  if (d.vt1Vo2 == null) return null;
+  if (h <= d.vt1Hr) return 3.5 + (d.vt1Vo2 - 3.5) * (h - d.hrRest) / (d.vt1Hr - d.hrRest);
+  if (d.vo2Peak == null) return null;
+  return d.vt1Vo2 + (d.vo2Peak - d.vt1Vo2) * (h - d.vt1Hr) / (d.hrPeak - d.vt1Hr);
+}
+function walkDesc(vLo, vHi) {
+  if (vLo == null || vHi == null) return null;
+  const s = (v) => (v - 3.5) / 0.1;
+  const g = (v) => (v - 3.5 - 0.1 * 80.4) / (1.8 * 80.4) * 100;
+  const mph = (m) => (m / MPH).toFixed(1);
+  const sLo = Math.max(50, s(vLo)), sHi = s(vHi);
+  if (sHi < 50) return { text: "an easy walk at a comfortable pace", short: "easy walk" };
+  if (sHi <= 100) {
+    const lo = mph(Math.min(sLo, sHi)), hi = mph(sHi);
+    const pace = 1609.34 / sHi; let mm = Math.floor(pace), ss = Math.round((pace - mm) * 60); if (ss === 60) { mm++; ss = 0; }
+    return { text: `walking on flat ground at about ${lo === hi ? hi : lo + " to " + hi} mph (a mile in about ${mm}:${String(ss).padStart(2, "0")} at the faster end)`, short: `${lo === hi ? hi : lo + "–" + hi} mph flat` };
+  }
+  const gLo = Math.max(0, Math.round(g(vLo))), gHi = Math.round(g(vHi));
+  if (gHi <= 15) return { text: `walking at 3.0 mph on a treadmill at ${gLo === gHi ? gHi + "%" : gLo + " to " + gHi + "%"} incline, or a brisk walk that includes hills`, short: `3.0 mph, ${gLo === gHi ? gHi : gLo + "–" + gHi}% grade` };
+  const run = (vHi - 3.5) / 0.2;
+  if (run >= 134) return { text: `an easy jog at about ${mph(run)} mph`, short: `jog ${mph(run)} mph` };
+  return { text: "brisk uphill walking or stair climbing", short: "uphill or stairs" };
+}
+
+/* ---------- Core computation ---------- */
+function compute(d) {
+  const errs = [], flags = [];
+  if (d.hrRest == null) errs.push("Enter resting HR.");
+  if (d.hrPeak == null) errs.push("Enter peak HR.");
+  if (d.vt1Hr == null) errs.push("Enter HR at AT.");
+  if (!errs.length && d.hrPeak <= d.hrRest) errs.push("Peak HR must be above resting HR.");
+  if (!errs.length && (d.vt1Hr <= d.hrRest || d.vt1Hr >= d.hrPeak)) errs.push("HR at AT must sit between resting and peak HR.");
+  const hasRcp = d.rcpHr != null;
+  if (!errs.length && hasRcp && (d.rcpHr <= d.vt1Hr || d.rcpHr > d.hrPeak)) errs.push("HR at RCP must be above HR at AT and no higher than peak HR.");
+  if (d.vt1Rpe != null && (d.vt1Rpe < 6 || d.vt1Rpe > 20)) errs.push("RPE must be between 6 and 20.");
+  if (d.vt1Vo2 != null && d.vo2Peak != null && d.vt1Vo2 >= d.vo2Peak) errs.push("VO2 at AT must be below peak VO2.");
+  if (errs.length) return { errs };
+
+  const r = { d, hasRcp };
+  r.pots = d.phen.includes("pots");
+  r.vent = false;
+  r.obes = d.phen.includes("obes");
+  r.bb = d.phen.includes("bb");
+  r.desat = d.phen.includes("desat");
+  r.submax = d.rer != null && d.rer < CONFIG.minRer;
+  r.fr = r.submax ? null : friend(d.age, d.sex, d.vo2Peak);
+  r.vt1PctHr = Math.round(100 * d.vt1Hr / d.hrPeak);
+  r.vt1PctVo2 = (d.vt1Vo2 != null && d.vo2Peak) ? Math.round(100 * d.vt1Vo2 / d.vo2Peak) : null;
+  r.modLo = Math.max(d.hrRest + 5, d.vt1Hr - CONFIG.modBand);
+  r.modHi = d.vt1Hr;
+  r.intLo = hasRcp ? Math.round(d.vt1Hr + CONFIG.heavyLowFrac * (d.rcpHr - d.vt1Hr)) : d.vt1Hr + 5;
+  r.intHi = hasRcp ? d.rcpHr : null;
+  r.walkMod = walkDesc(vo2AtHr(r, r.modLo), vo2AtHr(r, r.modHi));
+  r.walkInt = hasRcp ? walkDesc(vo2AtHr(r, r.intLo), vo2AtHr(r, r.intHi)) : null;
+
+  // Optional bike watts
+  if (d.vt1W != null) {
+    const ramp = d.ramp ?? CONFIG.defaultRamp, mrt = d.mrt ?? CONFIG.defaultMrt;
+    r.shift = ramp * mrt / 60;
+    const ss = (w) => w == null ? null : Math.max(0, roundTo(w - r.shift, CONFIG.roundW));
+    r.vt1Ss = ss(d.vt1W);
+    r.rcpSs = hasRcp ? ss(d.rcpW) : null;
+    r.bikeMod = `up to about ${r.vt1Ss} watts`;
+    r.bikeIntLo = r.rcpSs != null ? roundTo((r.vt1Ss + r.rcpSs) / 2, CONFIG.roundW) : null;
+    r.bikeInt = r.bikeIntLo != null ? `about ${r.bikeIntLo} to ${r.rcpSs} watts` : null;
+    if (d.ramp == null || d.mrt == null) flags.push(`Bike watts use a default ${d.ramp == null ? `${CONFIG.defaultRamp} W/min ramp` : ""}${d.ramp == null && d.mrt == null ? " and " : ""}${d.mrt == null ? `${CONFIG.defaultMrt} s MRT` : ""}.`);
+  }
+
+  r.perception = d.vt1Rpe == null ? null : (d.vt1Rpe < CONFIG.rpeUnder ? "under" : (d.vt1Rpe > CONFIG.rpeOver ? "over" : null));
+  if (!hasRcp) flags.push("No RCP HR entered: the interval zone has a floor but no ceiling. Intervals are capped by talk test.");
+  if (r.perception === "under") flags.push(`RPE ${d.vt1Rpe} at AT is below the usual range (about 11 ± 2). Likely underperceiver: the handout tells the patient to go by HR and talk test, not feel.`);
+  if (r.perception === "over") flags.push(`RPE ${d.vt1Rpe} at AT is above the usual range. Likely overperceiver: the handout reassures that the HR targets are safe even when they feel hard.`);
+  if (r.bb) flags.push("Beta-blocker or chronotropic incompetence: HR targets hold only on the tested dose. The handout makes the talk test primary.");
+  if (r.pots) flags.push("POTS: HR targets come from upright cycling. During the recumbent phase HR runs lower at the same effort, so the handout uses talk test for that phase.");
+  if (d.vt1Vo2 == null) flags.push("Enter VO2 at AT to generate walking speeds.");
+  if (r.submax) flags.push(`Peak RER ${d.rer.toFixed(2)}: effort may have been submaximal, so the fitness percentile is left off the handout. AT-based zones do not depend on maximal effort and still apply.`);
+  else if (d.age == null) flags.push("Enter age to give the FRIEND percentile.");
+  else if (!r.fr) flags.push("FRIEND cycle standards cover ages 20–89; percentile left out.");
+  if (r.desat) flags.push("SpO2 below 88%: the handout gives the Start stage only and tells the patient that intervals wait for the physician's review.");
+  if (r.obes) flags.push("Percentile and walking speeds use actual body weight. Obesity lowers the percentile and makes walking equations less accurate; the handout says so.");
+  if (!d.safeOk) flags.unshift("Tick 'Test ended without safety concerns' to issue the prescription. If there were concerns, hold it for physician review.");
+  r.flags = flags;
+  return r;
+}
+
+/* ---------- Patient document ---------- */
+function phases(r) {
+  const iv = r.vent
+    ? { first: "1 day a week: 10 rounds of 30 seconds hard, 30 seconds easy", later: "1 to 2 days a week: up to 20 rounds of 30 seconds hard, 30 seconds easy" }
+    : { first: "1 day a week: 4 rounds of 3 minutes hard, 3 minutes easy", later: "1 to 2 days a week: up to 6 rounds of 4 minutes hard, 2 minutes easy" };
+  const P = [];
+  P.push({ name: "Start", when: "usually about 4 weeks", items: [
+    `Steady sessions 3 to 4 days a week. Begin with 15 to 20 minutes and add a few minutes each week until you reach 30.`,
+    "Strength exercises 2 days a week, 1 set of each.",
+    r.pots ? "Lying or seated exercise only: recumbent bike, rowing machine, or swimming." : null
+  ].filter(Boolean), next: r.desat ? "Stay at this stage until your doctor has reviewed your oxygen results. They will tell you when to add harder exercise." : "Move on when you can do 30 minutes in the steady zone, 3 times a week, without feeling wiped out the next day." });
+  if (r.desat) return P;
+  P.push({ name: "Build", when: "usually about 4 weeks", items: [
+    "Steady sessions 3 days a week, 30 to 40 minutes.",
+    `Intervals ${iv.first}.`,
+    "Strength exercises 2 days a week, 2 sets of each.",
+    r.pots ? "Stay lying or seated for now. Add a few minutes of upright exercise at the end of a session if you feel well." : null
+  ].filter(Boolean), next: "Move on when the interval session feels manageable and you have recovered by the next day." });
+  P.push({ name: "Keep going", when: "from then on", items: [
+    `About 150 minutes a week in total${r.obes ? ", building toward 200 to 250 minutes if weight loss is a goal" : ""}.`,
+    `Steady sessions 2 to 3 days a week, 30 to 45 minutes, and intervals ${iv.later}.`,
+    "Strength exercises 2 days a week, 2 to 3 sets.",
+    r.pots ? "Move to upright exercise (walking, upright bike, elliptical) step by step, replacing one recumbent session at a time." : null
+  ].filter(Boolean), next: `We will recheck your zones at about ${CONFIG.retestWeek} weeks. As you get fitter your zones move up, and these numbers will start to feel too easy.` });
+  return P;
+}
+
+function stopSection(r) {
+  const L = [
+    "Stop exercising and call 911 for chest pain, pressure, or tightness that does not go away within a few minutes of rest.",
+    "Stop and contact us for fainting or nearly fainting, a racing or irregular heartbeat that does not settle, or breathlessness that does not settle within a few minutes of stopping.",
+    "Contact us before your next session for new leg pain or swelling, or anything else that worries you."
+  ];
+  if (r.pots) L.splice(1, 0, "If you feel lightheaded during exercise, stop, sit or lie down, and raise your legs until it passes.");
+  return { h: "Stop and get help", stop: true, list: L };
+}
+
+function buildDoc(r) {
+  const d = r.d, S = [];
+  const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const doc = { title: "Your exercise prescription", sub: `Based on your cardiopulmonary exercise test, ${today}`, sections: S };
+
+  const showed = [];
+  if (r.fr) {
+    const pctTxt = r.fr.below10 ? "below the 10th percentile, which means fewer than 10 in 100 people scored lower"
+      : r.fr.above90 ? "above the 90th percentile, which means more than 90 in 100 people scored lower"
+      : `about the ${r.fr.text}, which means about ${r.fr.pct} in 100 people scored lower and ${100 - r.fr.pct} scored higher`;
+    showed.push(`Your fitness (peak oxygen uptake) was ${d.vo2Peak} mL/kg/min. Compared with healthy people of your age and sex tested on an exercise bike, you were ${pctTxt}.${r.obes ? " Because this is measured per kilogram of body weight, carrying extra weight lowers the number." : ""}`);
+  } else if (d.vo2Peak != null) showed.push(`Your fitness (peak oxygen uptake) was ${d.vo2Peak} mL/kg/min.`);
+  showed.push(`During the test, your body changed gear at a heart rate of ${d.vt1Hr}. Below that heart rate you can exercise steadily for a long time. Above it, effort and breathing climb quickly. Your plan is built around that number.`);
+  if (r.fr && !r.fr.above90) showed.push("Fitness is one of the strongest predictors of long-term health, and the biggest gains come from moving up from the lowest levels.");
+  showed.push("A doctor will review all of your test results and send you a full report. This plan is built from measurements that do not depend on that review, so you can start it now.");
+  S.push({ h: "What your test showed", paras: showed });
+
+  const zones = [];
+  const z1 = [["Heart rate", `${r.modLo} to ${r.modHi} beats per minute`]];
+  if (r.walkMod) z1.push(["Walking", cap(r.walkMod.text) + "."]);
+  if (r.bikeMod) z1.push(["Exercise bike", cap(r.bikeMod) + ", if your bike shows watts."]);
+  z1.push(["10-second pulse", `${Math.round(r.modLo / 6)} to ${Math.round(r.modHi / 6)} beats, if you count your pulse for 10 seconds.`]);
+  z1.push(["Talk test", "You can talk in full sentences, but you are breathing harder than at rest."]);
+  z1.push(["How it feels", "Light to somewhat hard."]);
+  z1.push(["Use it for", "Most of your exercise."]);
+  zones.push({ cls: "mod", name: "Steady zone", hr: `${r.modLo}–${r.modHi}`, rows: z1 });
+  const z2 = [["Heart rate", r.hasRcp ? `${r.intLo} to ${r.intHi} beats per minute` : `above ${d.vt1Hr} beats per minute`]];
+  if (r.walkInt) z2.push(["Walking", cap(r.walkInt.text) + "."]);
+  if (r.bikeInt) z2.push(["Exercise bike", cap(r.bikeInt) + "."]);
+  if (r.hasRcp) z2.push(["10-second pulse", `${Math.round(r.intLo / 6)} to ${Math.round(r.intHi / 6)} beats.`]);
+  z2.push(["Talk test", "You can say a few words at a time, but not full sentences."]);
+  z2.push(["How it feels", "Somewhat hard to hard."]);
+  z2.push(["Use it for", "Short intervals, once you reach the Build stage."]);
+  if (!r.desat) zones.push({ cls: "heavy", name: "Interval zone", hr: r.hasRcp ? `${r.intLo}–${r.intHi}` : `${d.vt1Hr}+`, rows: z2 });
+  if (r.desat) zones.push({ cls: "sev", name: "Not yet", hr: `above ${r.modHi}`, rows: [["What to do", "Slow down to stay in your steady zone until your doctor has reviewed your oxygen results."]] });
+  else if (r.hasRcp) zones.push({ cls: "sev", name: "Too hard for now", hr: `above ${d.rcpHr}`, rows: [["What to do", "Slow down. You cannot keep this up, and at this stage it does not add benefit."], ["Talk test", "You cannot talk."]] });
+  let zoneNote = null;
+  if (r.bb) zoneNote = "Your heart rate medicine lowers your heart rate. Use the talk test first, and treat the heart rate numbers as a rough check.";
+  else if (r.pots) zoneNote = "These heart rates were measured sitting upright on a bike. Lying or seated exercise gives a lower heart rate for the same effort, so during the Start and Build stages go by the talk test. Use the heart rates once you exercise upright.";
+  S.push({ h: "Your exercise zones", zones, note: zoneNote });
+
+  S.push({ h: "Your plan", intro: r.desat ? "Start with the steady sessions below. Your doctor will add harder exercise after reviewing your results." : "Move to the next stage when you meet the goal at the bottom of each box, not by the calendar. The times are a guide.", phases: phases(r), paras: [
+    r.pots ? null : r.obes ? "Good choices: cycling, water exercise, an elliptical, or walking. Pick what you will keep doing." : "Walking or cycling both work. Pick what you will keep doing.",
+    "Spread your exercise through the week. Do strength work on days that are not back to back."
+  ].filter(Boolean) });
+
+  const sess = [
+    "Every session: start with 5 minutes of easy movement and finish with 5 to 10 minutes easy.",
+    `Steady sessions: stay in the steady zone (${r.modLo} to ${r.modHi}) for the main part. Your heart rate drifts up as the session goes on; slow down a little to stay in the zone.`
+  ];
+  if (r.desat) { /* no interval guidance until physician review */ }
+  else if (r.vent) sess.push("Interval sessions: after the warm-up, alternate 30 seconds in the interval zone with 30 seconds easy. Judge the hard part by the talk test; heart rate is too slow to catch up in 30 seconds.");
+  else sess.push(`Interval sessions: after a 10-minute warm-up in the steady zone, work in the interval zone for the time shown, then go easy. Heart rate takes 1 to 2 minutes to rise, so judge the first minute of each interval by the talk test.${r.hasRcp ? ` Do not go above ${d.rcpHr}.` : ""}`);
+  if (r.desat) sess.push("Your oxygen level dropped during the test. If you already use oxygen, use it during exercise. Your doctor will advise on this after reviewing your results.");
+  S.push({ h: "How to do each session", list: sess });
+
+  if (r.pots) S.push({ h: "Extra steps for POTS", list: [
+    "Drink plenty of fluid through the day and before exercise, and follow the salt and compression advice from your POTS clinic.",
+    "Avoid exercising in heat, after a large meal, or first thing after getting out of bed.",
+    "Cool down gradually. Stopping suddenly while standing can make you lightheaded.",
+    "The first few weeks often feel harder, and symptoms can briefly get worse before they improve. Keep going at the Start level unless you hit a stop sign below.",
+    "Strength exercises for the legs and core matter for POTS. Do them seated or lying at first."
+  ] });
+
+  S.push({ h: "Strength exercises, 2 days a week", list: [
+    "Sit to stand from a chair, without using your hands if you can.",
+    "Step-ups onto a stair, holding the rail.",
+    "Push-ups against a wall or kitchen counter.",
+    "Heel raises, holding a counter for balance.",
+    "Bridges: lie on your back with knees bent and lift your hips.",
+    "Rows with a resistance band or a bag of groceries.",
+    "Choose a level where the last 2 or 3 repetitions of 10 to 15 feel hard. When a set feels easy, add repetitions or resistance."
+  ] });
+
+  const chk = [];
+  chk.push(r.bb ? "Go mainly by the talk test. A heart rate monitor is still useful as a check." : "A heart rate monitor helps. A chest strap is most accurate; a wrist watch is fine for steady sessions but lags during intervals.");
+  chk.push("Without a monitor, use the talk test. It matches your steady zone well.");
+  if (r.perception === "under") chk.push(`During your test you rated the effort at your threshold as ${d.vt1Rpe} out of 20, which means "very light". Your body was actually working at a moderate level. Some people sense effort as lower than it is. Go by heart rate and the talk test, not by feel.`);
+  if (r.perception === "over") chk.push(`During your test you rated the effort at your threshold as ${d.vt1Rpe} out of 20, harder than your body was actually working. This is common when breathlessness feels worrying. The heart rates in this plan are safe for you even when they feel hard.`);
+  chk.push("Getting breathless during exercise is expected and is not harmful at these levels. It should settle within a few minutes of slowing down.");
+  S.push({ h: "Checking your effort", list: chk });
+
+  S.push({ h: "What to expect", list: [
+    "First 2 weeks: your legs may feel tired or a little sore. This is normal and settles.",
+    "After about a month: the same walk or ride should feel easier, and your heart rate will be lower at the same pace. Speed up a little to stay in your zone.",
+    `By ${CONFIG.retestWeek} weeks: with regular training, fitness typically improves by 10 to 20 percent, and activities that made you breathless should feel easier.`,
+    "Missed a week or were unwell? Go back a stage and build up again. Do not exercise with a fever."
+  ] });
+
+  S.push(stopSection(r));
+  return doc;
+}
+
+/* ---------- Renderers ---------- */
+function docHTML(doc) {
+  let h = `<div><div class="doc-title">${esc(doc.title)}</div><div class="doc-sub">${esc(doc.sub)}</div></div>`;
+  doc.sections.forEach(s => {
+    h += `<section${s.stop ? ' class="stop"' : ""}><h2>${esc(s.h)}</h2>`;
+    if (s.intro) h += `<p>${esc(s.intro)}</p>`;
+    if (s.zones) {
+      h += `<div class="zone-cards">` + s.zones.map(z => `<div class="zcard ${z.cls}"><div><div class="zname">${esc(z.name)}</div><div class="zhr">${esc(z.hr)}<small>beats per minute</small></div></div><dl>${z.rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>`).join("") + `</div>`;
+      if (s.note) h += `<p class="callout" style="margin-top:12px">${esc(s.note)}</p>`;
+    }
+    if (s.phases) {
+      h += `<div class="phases">` + s.phases.map((p, i) => `<div class="phase"><div class="ph-head"><span class="ph-name">${i + 1}. ${esc(p.name)}</span><span class="ph-when">${esc(p.when)}</span></div><ul>${p.items.map(x => `<li>${esc(x)}</li>`).join("")}</ul><div class="next">${esc(p.next)}</div></div>`).join("") + `</div>`;
+      if (s.paras) h += `<div style="margin-top:12px">${s.paras.map(x => `<p>${esc(x)}</p>`).join("")}</div>`;
+    } else if (s.paras) h += s.paras.map(x => `<p>${esc(x)}</p>`).join("");
+    if (s.list) h += `<ul>${s.list.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`;
+    h += `</section>`;
+  });
+  return h;
+}
+function docText(doc) {
+  const L = [doc.title.toUpperCase(), doc.sub, ""];
+  doc.sections.forEach(s => {
+    L.push(s.h.toUpperCase());
+    if (s.intro) L.push(s.intro);
+    if (s.zones) s.zones.forEach(z => {
+      L.push(`${z.name}: ${z.hr} beats per minute`);
+      z.rows.forEach(([k, v]) => L.push(`  ${k}: ${v}`));
+    });
+    if (s.note) L.push(s.note);
+    if (s.phases) s.phases.forEach((p, i) => {
+      L.push(`Stage ${i + 1}, ${p.name} (${p.when}):`);
+      p.items.forEach(x => L.push(`  - ${x}`));
+      L.push(`  ${p.next}`);
+    });
+    if (s.paras) s.paras.forEach(x => L.push(x));
+    if (s.list) s.list.forEach(i => L.push(`- ${i}`));
+    L.push("");
+  });
+  return L.join("\n").replace(/[–—]/g, "-").trim();
+}
+
+function scaleHTML(r) {
+  const d = r.d, lo = d.hrRest, hi = d.hrPeak;
+  const P = (x) => Math.max(0, Math.min(100, (x - lo) / (hi - lo) * 100));
+  const segs = [`<div class="seg mod" style="left:0%;width:${P(d.vt1Hr)}%">${P(d.vt1Hr) > 14 ? "Moderate" : ""}</div>`];
+  if (r.hasRcp) {
+    segs.push(`<div class="seg heavy" style="left:${P(d.vt1Hr)}%;width:${P(d.rcpHr) - P(d.vt1Hr)}%">${P(d.rcpHr) - P(d.vt1Hr) > 12 ? "Heavy" : ""}</div>`);
+    segs.push(`<div class="seg sev" style="left:${P(d.rcpHr)}%;width:${100 - P(d.rcpHr)}%">${100 - P(d.rcpHr) > 12 ? "Severe" : ""}</div>`);
+  } else segs.push(`<div class="seg unk" style="left:${P(d.vt1Hr)}%;width:${100 - P(d.vt1Hr)}%">Above AT</div>`);
+  const guides = `<div class="guide" style="left:${P(d.vt1Hr)}%"></div>` + (r.hasRcp ? `<div class="guide" style="left:${P(d.rcpHr)}%"></div>` : "");
+  const bar = (a, b, cls, t) => `<div class="bar ${cls}" style="left:${P(a)}%;width:${Math.max(0.8, P(b) - P(a))}%"></div><div class="bar-lab" style="left:${(P(a) + P(b)) / 2}%">${t}</div>`;
+  let tb = bar(r.modLo, r.modHi, "mod", `${r.modLo}–${r.modHi}`);
+  if (r.hasRcp) tb += bar(r.intLo, r.intHi, "heavy", `${r.intLo}–${r.intHi}`);
+  return `<div class="scale">
+    <div class="lab">Domain</div><div class="track">${segs.join("")}${guides}</div>
+    <div class="lab">Targets</div><div class="track thin">${guides}${tb}</div>
+    <div class="lab">HR, bpm</div><div class="axis">
+      <div class="tick left" style="left:0%"><b>${d.hrRest}</b>rest</div>
+      <div class="tick" style="left:${P(d.vt1Hr)}%"><b>${d.vt1Hr}</b>AT</div>
+      ${r.hasRcp ? `<div class="tick" style="left:${P(d.rcpHr)}%"><b>${d.rcpHr}</b>RCP</div>` : ""}
+      <div class="tick right" style="left:100%"><b>${d.hrPeak}</b>peak</div></div></div>`;
+}
+
+function clinText(r) {
+  const d = r.d, L = [];
+  L.push("EXERCISE PRESCRIPTION (threshold-based)");
+  let pk = `Rest HR ${d.hrRest}, peak HR ${d.hrPeak}`;
+  if (d.vo2Peak != null) pk += `, peak VO2 ${d.vo2Peak} mL/kg/min${r.fr ? ` (FRIEND cycle ${r.fr.text}, ${d.sex} ${r.fr.band})` : ""}`;
+  L.push(pk + ".");
+  let a = `AT: HR ${d.vt1Hr} (${r.vt1PctHr}% peak HR)`;
+  if (d.vt1Vo2 != null) a += `, VO2 ${d.vt1Vo2}${r.vt1PctVo2 != null ? ` (${r.vt1PctVo2}% peak)` : ""}`;
+  if (r.vt1Ss != null) a += `, ${d.vt1W} W ramp / ~${r.vt1Ss} W steady-state`;
+  if (d.vt1Rpe != null) a += `, RPE ${d.vt1Rpe}`;
+  L.push(a + ".");
+  L.push(r.hasRcp ? `RCP: HR ${d.rcpHr}${r.rcpSs != null ? `, ${d.rcpW} W ramp / ~${r.rcpSs} W steady-state` : ""}.` : "RCP: not identified.");
+  L.push(`Steady zone: HR ${r.modLo}-${r.modHi}${r.walkMod ? `, walking ${r.walkMod.short}` : ""}${r.vt1Ss != null ? `, cycle up to ${r.vt1Ss} W` : ""}, talk test full sentences.`);
+  L.push(`Interval zone: HR ${r.hasRcp ? `${r.intLo}-${r.intHi}` : `above ${d.vt1Hr}`}${r.walkInt ? `, walking ${r.walkInt.short}` : ""}${r.bikeIntLo != null ? `, cycle ${r.bikeIntLo}-${r.rcpSs} W` : ""}, talk test short phrases.`);
+  L.push(`AT and RCP selected at time of test, before physician interpretation. Reissue if AT HR is revised by more than ${CONFIG.atRevise} bpm.`);
+  if (r.desat) L.push("SpO2 < 88%: Start stage only issued; intervals pending physician review.");
+  else L.push(`Plan: three criterion-based stages (base, add ${r.vent ? "30/30" : "3-4 min"} intervals, maintain ~150 min/wk); resistance 2 d/wk; re-test ~${CONFIG.retestWeek} weeks.`);
+  if (r.pots) L.push("POTS: recumbent stages 1-2, staged transition to upright, talk test during recumbent phase; fluid/salt/compression per POTS clinic.");
+  if (r.perception === "under") L.push(`RPE at AT ${d.vt1Rpe}: underperceiver; HR and talk test emphasized.`);
+  if (r.perception === "over") L.push(`RPE at AT ${d.vt1Rpe}: overperceiver; reassurance given.`);
+  if (r.submax) L.push(`Peak RER ${d.rer.toFixed(2)}: percentile not reported to patient.`);
+  const mods = d.phen.filter(x => x !== "pots" && x !== "desat").map(x => ({ bb: "beta-blocker (talk test primary)", obes: "BMI >= 30" }[x]));
+  if (mods.length) L.push(`Modifiers: ${mods.join("; ")}.`);
+  L.push("Written exercise prescription given to patient.");
+  return L.join("\n").replace(/[–—]/g, "-");
+}
+
+function clinHTML(r) {
+  const d = r.d, bike = r.vt1Ss != null;
+  const rows = `
+    <tr class="mod"><td class="zone">Steady</td><td class="num">${r.modLo}–${r.modHi}<span class="sub">ceiling ${d.vt1Hr}</span></td>
+      <td>${r.walkMod ? esc(r.walkMod.short) : "–"}</td>${bike ? `<td class="num">≤ ${r.vt1Ss}<span class="sub">ramp ${d.vt1W}</span></td>` : ""}
+      <td>Full sentences</td><td>Light to somewhat hard<span class="sub">patient RPE at AT: ${d.vt1Rpe ?? "–"}</span></td></tr>
+    <tr class="heavy"><td class="zone">Interval</td><td class="num">${r.hasRcp ? `${r.intLo}–${r.intHi}` : `> ${d.vt1Hr}`}<span class="sub">${r.hasRcp ? `domain ${d.vt1Hr + 1}–${d.rcpHr}` : "RCP not identified"}</span></td>
+      <td>${r.walkInt ? esc(r.walkInt.short) : "–"}</td>${bike ? `<td class="num">${r.bikeIntLo != null ? `${r.bikeIntLo}–${r.rcpSs}` : "–"}</td>` : ""}
+      <td>Short phrases</td><td>Somewhat hard to hard</td></tr>
+    ${r.hasRcp ? `<tr class="sev"><td class="zone">Too hard</td><td class="num">> ${d.rcpHr}</td><td>–</td>${bike ? `<td class="num">${r.rcpSs != null ? "> " + r.rcpSs : "–"}</td>` : ""}<td>Cannot talk</td><td>Very hard</td></tr>` : ""}`;
+  const chips = [
+    r.fr ? `<span class="chip">FRIEND ${r.fr.text} (${d.sex === "female" ? "F" : "M"} ${r.fr.band})</span>` : "",
+    `<span class="chip">AT ${r.vt1PctHr}% peak HR</span>`,
+    r.vt1PctVo2 != null ? `<span class="chip">AT ${r.vt1PctVo2}% peak VO2</span>` : ""
+  ].join("");
+  return `
+    <section class="panel"><div class="panel-head"><h2>Where the targets fall</h2><div class="chips">${chips}</div></div>${scaleHTML(r)}</section>
+    <section class="panel"><div class="panel-head"><h2>Zone table</h2></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Zone</th><th>HR, bpm</th><th>Walking</th>${bike ? "<th>Cycle, steady-state W</th>" : ""}<th>Talk test</th><th>Feel</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="hint" style="margin-top:10px">Walking: HR mapped to VO2 by linear interpolation (rest, AT, peak), then the ACSM walking equation (flat up to 100 m/min; above that, grade at 3.0 mph).</p>
+    </section>
+    <section class="panel"><div class="panel-head"><h2>Report text</h2><div class="toolbar"><button type="button" id="btnCopyClin">Copy report text</button><span class="copied" id="copiedClin" hidden></span></div></div>
+      <pre class="report" id="clinPre">${esc(lastClinText)}</pre></section>`;
+}
+
+/* ---------- Evidence ---------- */
+const EVIDENCE = [
+  { h: "Anchor intensity to the patient's own thresholds", what: "Zones from AT and RCP, not % peak HR", tag: ["mid", "Consistent physiology; small RCTs"],
+    p: "Fixed percentages of peak HR put people in different intensity domains: LT fell between 60% and 90% of HRmax across 100 adults. Two small RCTs in sedentary adults found larger VO2max gains with threshold-based prescription than with %HRR. Joint society guidance recommends threshold-based prescription when CPET is available.",
+    refs: [["Iannetta 2020, Med Sci Sports Exerc. PMID 31479001", "10.1249/MSS.0000000000002147"], ["Wolpern 2015, BMC Sports Sci Med Rehabil. PMID 26146564", "10.1186/s13102-015-0011-z"], ["Weatherwax 2019, Med Sci Sports Exerc. PMID 30673687", "10.1249/MSS.0000000000001842"], ["Mezzani 2013, joint position statement, Eur J Prev Cardiol. PMID 23104970", "10.1177/2047487312460484"]] },
+  { h: "FRIEND percentile instead of % predicted", what: "Fitness statement on the handout", tag: ["mid", "Registry reference standard"],
+    p: "Cycle-ergometer percentiles by sex and decade from apparently healthy US adults. A percentile is easier for patients to understand than % predicted. It uses actual body weight, so obesity lowers it independent of cardiopulmonary function.",
+    refs: [["Kaminsky 2022, Mayo Clin Proc. PMID 34809986", "10.1016/j.mayocp.2021.08.020"]] },
+  { h: "HR and talk test first; feel described in words", what: "Why the patient's own RPE is not the target", tag: ["mid", "Large cohort; reviews"],
+    p: "In 2,560 tests, RPE at LT averaged 10.8 with an SD of 1.8, so individual ratings at threshold vary widely. Copying a patient's rating at AT into the prescription carries their perception bias into it. Comfortable speech is usually possible below VT1 and not above it; individual agreement is moderate, so the talk test backs up HR.",
+    refs: [["Scherr 2013, Eur J Appl Physiol. PMID 22615009", "10.1007/s00421-012-2421-x"], ["Bok 2022, Sports Med. PMID 35507232", "10.1007/s40279-022-01690-3"], ["Reed and Pipe 2014, Curr Opin Cardiol. PMID 25010379", "10.1097/HCO.0000000000000097"]] },
+  { h: "Build to about 150 min/week, strength 2 days/week", what: "Volume targets in the Keep going stage", tag: ["strong", "Guidelines"],
+    p: "150–300 min/week of moderate activity, or an equivalent mix with vigorous work, plus muscle strengthening on 2 or more days. The least active gain most from modest increases. Gradual progression of volume and intensity is recommended.",
+    refs: [["Piercy 2018, Physical Activity Guidelines for Americans, JAMA. PMID 30418471", "10.1001/jama.2018.14854"], ["Garber 2011, ACSM position stand, Med Sci Sports Exerc. PMID 21694556", "10.1249/MSS.0b013e318213fefb"]] },
+  { h: "Add intervals after a base", what: "Build stage", tag: ["mid", "Meta-analyses"],
+    p: "In lifestyle-related cardiometabolic disease, interval training raised VO2peak about 3 mL/kg/min more than moderate continuous training; in healthy young adults the extra gain was about 1.2 mL/kg/min. Enough total dose matters: raising intensity or frequency eliminated fitness non-response in two RCTs.",
+    refs: [["Weston 2014, Br J Sports Med. PMID 24144531", "10.1136/bjsports-2013-092576"], ["Milanović 2015, Sports Med. PMID 26243014", "10.1007/s40279-015-0365-0"], ["Ross 2015, Mayo Clin Proc. PMID 26455890", "10.1016/j.mayocp.2015.07.024"], ["Montero and Lundby 2017, J Physiol. PMID 28133739", "10.1113/JP273480"]] },
+  { h: "POTS: recumbent first, then upright, with strength work", what: "POTS modifier", tag: ["mid", "Small trials, registry, guidelines"],
+    p: "A 3-month program progressing from semi-recumbent to upright training, 3–5 times a week for 30–45 minutes, plus strength training and salt and fluid, improved standing HR and quality of life more than propranolol. In a community registry, 71% of completers no longer met POTS criteria, but only 103 of 251 enrolled completed. HRS and Canadian Cardiovascular Society statements both endorse exercise training. The 'worse before better' counselling is clinical experience, not trial data.",
+    refs: [["Fu 2011, Hypertension. PMID 21690484", "10.1161/HYPERTENSIONAHA.111.172262"], ["George 2016, Heart Rhythm. PMID 26690066", "10.1016/j.hrthm.2015.12.012"], ["Sheldon 2015, HRS expert consensus, Heart Rhythm. PMID 25980576", "10.1016/j.hrthm.2015.03.029"], ["Raj 2020, CCS position statement, Can J Cardiol. PMID 32145864", "10.1016/j.cjca.2019.12.024"]] },
+  { h: "Correct ramp watts to steady-state watts", what: "Optional bike targets", tag: ["mid", "Physiology"],
+    p: "VO2 lags the ramp, so power at a threshold during a ramp overstates steady-state power at the same VO2. On a ramp, RCP occurred about 40 W higher than MLSS and critical power at the same VO2.",
+    refs: [["Keir 2015, Med Sci Sports Exerc. PMID 25606817", "10.1249/MSS.0000000000000613"]] },
+  { h: "Why fitness gains matter", what: "Framing for patients", tag: ["strong", "Meta-analysis of cohorts"],
+    p: "Each 1-MET higher fitness was associated with 13% lower all-cause mortality and 15% fewer CHD/CVD events across 33 cohorts, with the largest contrast between the lowest and intermediate fitness groups. The handout's '10 to 20 percent' is a typical figure for sedentary adults, not a guarantee.",
+    refs: [["Kodama 2009, JAMA. PMID 19454641", "10.1001/jama.2009.681"]] },
+  { h: "Walking speeds from VO2", what: "Translating zones into everyday terms", tag: ["judg", "Standard equations"],
+    p: "ACSM metabolic equations (ACSM's Guidelines for Exercise Testing and Prescription). Flat walking equation valid for 50–100 m/min; less accurate in obesity and with altered gait. The HR-to-VO2 mapping assumes linearity between rest, AT and peak. Treat as a starting pace and let HR correct it.",
+    refs: [] },
+  { h: "Issued at the end of the test, before interpretation", what: "Technician workflow", tag: ["judg", "Design choice"],
+    p: "Zones are anchored to AT, which does not depend on maximal effort, so they hold even when peak values are uncertain. Inputs are limited to measured values and chart facts; nothing requires interpretation. Safety concerns hold the prescription, desaturation limits it to the Start stage, and a low peak RER suppresses the percentile. AT chosen at the time of the test can move at interpretation; the report text asks for a reissue if it moves by more than 5 bpm.",
+    refs: [] },
+  { h: "Choices with no direct evidence", what: "Edit in CONFIG", tag: ["judg", "Clinical judgment"],
+    p: `Steady band (AT HR minus ${CONFIG.modBand}); interval start (${Math.round(CONFIG.heavyLowFrac * 100)}% of the way from AT to RCP); the three stages and their move-on criteria; the strength exercise list; RPE cut-offs for flagging under- and overperception (below ${CONFIG.rpeUnder}, above ${CONFIG.rpeOver}).`,
+    refs: [] }
+];
+function evidenceHTML() {
+  return `<section class="panel">${EVIDENCE.map(e => `<div class="ev-row"><div><h3>${esc(e.h)}</h3><div class="what">${esc(e.what)}</div><span class="tag ${e.tag[0]}">${esc(e.tag[1])}</span></div><div><p>${esc(e.p)}</p>${e.refs.length ? `<div class="refs">${e.refs.map(([t, doi]) => `<span>${esc(t)} · <a href="https://doi.org/${doi}" target="_blank" rel="noopener">doi:${doi}</a></span>`).join("")}</div>` : ""}</div></div>`).join("")}</section>`;
+}
+
+/* ---------- Render ---------- */
+function copyText(text, preId, msgId, detailsId) {
+  const msg = $(msgId);
+  const done = () => { msg.textContent = "Copied"; msg.hidden = false; setTimeout(() => { msg.hidden = true; }, 1600); };
+  const fallback = () => {
+    if (detailsId) $(detailsId).open = true;
+    const el = $(preId); if (!el) return;
+    const rg = document.createRange(); rg.selectNodeContents(el);
+    const s = window.getSelection(); s.removeAllRanges(); s.addRange(rg);
+    msg.textContent = "Selected; press Ctrl/Cmd+C"; msg.hidden = false;
+  };
+  try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback(); }
+  catch (e) { fallback(); }
+}
+
+function setTab(t) {
+  activeTab = t;
+  ["patient", "clin", "ev"].forEach(k => { $("tab-" + k).setAttribute("aria-selected", String(k === t)); $("pane-" + k).hidden = k !== t; });
+  $("flagbox").hidden = t === "ev";
+}
+
+function render() {
+  const r = compute(read());
+  if (r.errs) {
+    $("flagbox").innerHTML = `<div class="flags">${r.errs.map(e => `<div class="flag err">${esc(e)}</div>`).join("")}</div>`;
+    $("pane-patient").innerHTML = `<p class="hint">Resting HR, peak HR and HR at AT are enough to start. Load the example to see a finished prescription.</p>`;
+    $("pane-clin").innerHTML = "";
+  } else {
+    $("flagbox").innerHTML = (isExample ? `<div class="toolbar" style="margin-bottom:8px"><span class="chip-ex">Example patient, not real data</span></div>` : "") +
+      (r.flags.length ? `<div class="flags">${r.flags.map(f => `<div class="flag">${esc(f)}</div>`).join("")}</div>` : "");
+    if (!r.d.safeOk) {
+      $("pane-patient").innerHTML = `<section class="panel"><h2>Prescription on hold</h2><p style="margin:8px 0 0;max-width:62ch">Confirm that the test ended without safety concerns before issuing. If the test stopped for chest pain, ischemic ECG changes, significant arrhythmia, an abnormal blood pressure response, or a near-faint, give no prescription today and route the study to the reading physician.</p></section>`;
+      $("pane-clin").innerHTML = "";
+      setTab(activeTab);
+      return;
+    }
+    const doc = buildDoc(r);
+    lastPatientText = docText(doc);
+    lastClinText = clinText(r);
+    $("pane-patient").innerHTML = `
+      <div class="toolbar" style="margin-bottom:10px">
+        <button type="button" id="btnCopyPt" class="primary">Copy as plain text</button>
+        ${inFrame ? "" : `<button type="button" id="btnPrint">Print handout</button>`}
+        <span class="hint">Plain text is for the after-visit summary.</span><span class="copied" id="copiedPt" hidden></span>
+      </div>
+      <details class="plain" id="ptDetails"><summary>Show plain text</summary><pre class="report" id="ptPre">${esc(lastPatientText)}</pre></details>
+      <article class="sheet">${docHTML(doc)}</article>`;
+    $("pane-clin").innerHTML = clinHTML(r);
+    $("btnCopyPt").addEventListener("click", () => copyText(lastPatientText, "ptPre", "copiedPt", "ptDetails"));
+    if (!inFrame) $("btnPrint").addEventListener("click", () => window.print());
+    $("btnCopyClin").addEventListener("click", () => copyText(lastClinText, "clinPre", "copiedClin"));
+  }
+  setTab(activeTab);
+}
+
+$("pane-ev").innerHTML = evidenceHTML();
+["patient", "clin", "ev"].forEach(k => $("tab-" + k).addEventListener("click", () => setTab(k)));
+$("form").addEventListener("input", () => { isExample = false; render(); });
+$("form").addEventListener("change", () => render());
+$("form").addEventListener("submit", (e) => e.preventDefault());
+$("btnExample").addEventListener("click", () => { fill(EXAMPLE); isExample = true; render(); });
+$("btnClear").addEventListener("click", () => { fill({ sex: "female", safeOk: false, phen: [] }); isExample = false; render(); });
+if (location.hash === "#evidence") activeTab = "ev";
+fill(EXAMPLE); isExample = true; render();
+</script>
+
+</body>
+</html>
