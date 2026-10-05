@@ -211,7 +211,23 @@ pre.report { font-family: var(--font-data); font-size: 0.8rem; line-height: 1.55
   .zcard dl { font-size: 9.5pt; gap: 1px 10px; }
   .callout { font-size: 9pt; padding: 6px 10px; }
   .zcard, .phase { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  @page { margin: 14mm; }
+  @page { size: letter; margin: 11mm 13mm; }
+  .sheet { font-size: 9pt; line-height: 1.3; gap: 7px; }
+  .sheet h2 { font-size: 9.5pt; padding-bottom: 2px; margin-bottom: 3px; }
+  .sheet .doc-title { font-size: 14pt; }
+  .sheet .doc-sub { font-size: 8pt; margin-top: 0; }
+  .zone-cards, .phases { gap: 4px; }
+  .zcard, .phase { padding: 6px 10px; }
+  .zcard { grid-template-columns: 7.5rem minmax(0, 1fr); gap: 2px 12px; }
+  .zcard .zname { font-size: 10pt; }
+  .zcard .zhr { font-size: 12.5pt; }
+  .zcard dl { font-size: 8.8pt; grid-template-columns: 6rem minmax(0, 1fr); gap: 0 10px; }
+  .zcard dt { padding-top: 1px; font-size: 8pt; }
+  .phase .ph-head { margin-bottom: 2px; }
+  .phase .next { margin-top: 3px; padding-top: 3px; font-size: 8.5pt; }
+  .sheet section.cols2 ul { display: block; columns: 2; column-gap: 18px; }
+  .sheet section.cols2 li { break-inside: avoid; margin-bottom: 2px; }
+  .callout { font-size: 8.5pt; padding: 4px 8px; margin-top: 6px !important; }
 }
 </style>
 </head>
@@ -269,11 +285,7 @@ pre.report { font-family: var(--font-data); font-size: 0.8rem; line-height: 1.55
         <label class="chk"><input type="checkbox" name="phen" value="desat" id="ph-desat"> SpO2 fell below 88% during the test</label>
       </fieldset>
 
-      <fieldset>
-        <legend class="fs">Before issuing</legend>
-        <label class="chk"><input type="checkbox" id="safeOk"> Test ended without safety concerns</label>
-        <p class="hint">Do not issue if the test stopped for chest pain, ischemic ECG changes, significant arrhythmia, a fall or failure to rise in blood pressure, or a near-faint. Hold for physician review instead.</p>
-      </fieldset>
+      <div class="flag err" role="note"><b>Do not issue</b> if the test stopped for chest pain, ischemic ECG changes, significant arrhythmia, a fall or failure to rise in blood pressure, or a near-faint. Hold for physician review instead.</div>
 
       <details class="opt" id="bikeOpt">
         <summary>Bike watts (optional)</summary>
@@ -350,7 +362,7 @@ const EXAMPLE = {
   hrRest: 80, hrPeak: 162, vo2Peak: 15.0,
   vt1Hr: 120, vt1Vo2: 9.5, rcpHr: 146, vt1Rpe: 12,
   rer: 1.16, vt1W: null, rcpW: null, ramp: null, mrt: null,
-  safeOk: true, phen: []
+  phen: []
 };
 
 
@@ -367,14 +379,13 @@ const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function read() {
-  const d = { sex: $("sex").value, safeOk: $("safeOk").checked };
+  const d = { sex: $("sex").value };
   NUMS.forEach(f => d[f] = num(f));
   d.phen = [...document.querySelectorAll('input[name="phen"]:checked')].map(e => e.value);
   return d;
 }
 function fill(d) {
   $("sex").value = d.sex || "female";
-  $("safeOk").checked = !!d.safeOk;
   NUMS.forEach(f => $(f).value = d[f] == null ? "" : d[f]);
   document.querySelectorAll('input[name="phen"]').forEach(e => e.checked = (d.phen || []).includes(e.value));
 }
@@ -480,7 +491,6 @@ function compute(d) {
   else if (!r.fr) flags.push("FRIEND cycle standards cover ages 20–89; percentile left out.");
   if (r.desat) flags.push("SpO2 below 88%: the handout gives the Start stage only and tells the patient that intervals wait for the physician's review.");
   if (r.obes) flags.push("Percentile and walking speeds use actual body weight. Obesity lowers the percentile and makes walking equations less accurate; the handout says so.");
-  if (!d.safeOk) flags.unshift("Tick 'Test ended without safety concerns' to issue the prescription. If there were concerns, hold it for physician review.");
   r.flags = flags;
   return r;
 }
@@ -558,9 +568,10 @@ function buildDoc(r) {
   if (!r.desat) zones.push({ cls: "heavy", name: "Interval zone", hr: r.hasRcp ? `${r.intLo}–${r.intHi}` : `${d.vt1Hr}+`, rows: z2 });
   if (r.desat) zones.push({ cls: "sev", name: "Not yet", hr: `above ${r.modHi}`, rows: [["What to do", "Slow down to stay in your steady zone until your doctor has reviewed your oxygen results."]] });
   else if (r.hasRcp) zones.push({ cls: "sev", name: "Too hard for now", hr: `above ${d.rcpHr}`, rows: [["What to do", "Slow down. You cannot keep this up, and at this stage it does not add benefit."], ["Talk test", "You cannot talk."]] });
-  let zoneNote = null;
-  if (r.bb) zoneNote = "Your heart rate medicine lowers your heart rate. Use the talk test first, and treat the heart rate numbers as a rough check.";
-  else if (r.pots) zoneNote = "These heart rates were measured sitting upright on a bike. Lying or seated exercise gives a lower heart rate for the same effort, so during the Start and Build stages go by the talk test. Use the heart rates once you exercise upright.";
+  const notes = [];
+  if (r.bb) notes.push("Your heart rate medicine lowers your heart rate. Use the talk test first, and treat the heart rate numbers as a rough check.");
+  if (r.pots) notes.push("These heart rates were measured sitting upright on a bike. Lying or seated exercise gives a lower heart rate for the same effort, so during the Start and Build stages go by the talk test. Use the heart rates once you exercise upright.");
+  const zoneNote = notes.length ? notes.join(" ") : null;
   S.push({ h: "Your exercise zones", zones, note: zoneNote });
 
   S.push({ h: "Your plan", intro: r.desat ? "Start with the steady sessions below. Your doctor will add harder exercise after reviewing your results." : "Move to the next stage when you meet the goal at the bottom of each box, not by the calendar. The times are a guide.", phases: phases(r), paras: [
@@ -578,7 +589,7 @@ function buildDoc(r) {
   if (r.desat) sess.push("Your oxygen level dropped during the test. If you already use oxygen, use it during exercise. Your doctor will advise on this after reviewing your results.");
   S.push({ h: "How to do each session", list: sess });
 
-  if (r.pots) S.push({ h: "Extra steps for POTS", list: [
+  if (r.pots) S.push({ h: "Extra steps for POTS", cols: true, list: [
     "Drink plenty of fluid through the day and before exercise, and follow the salt and compression advice from your POTS clinic.",
     "Avoid exercising in heat, after a large meal, or first thing after getting out of bed.",
     "Cool down gradually. Stopping suddenly while standing can make you lightheaded.",
@@ -586,7 +597,7 @@ function buildDoc(r) {
     "Strength exercises for the legs and core matter for POTS. Do them seated or lying at first."
   ] });
 
-  S.push({ h: "Strength exercises, 2 days a week", list: [
+  S.push({ h: "Strength exercises, 2 days a week", cols: true, list: [
     "Sit to stand from a chair, without using your hands if you can.",
     "Step-ups onto a stair, holding the rail.",
     "Push-ups against a wall or kitchen counter.",
@@ -602,9 +613,9 @@ function buildDoc(r) {
   if (r.perception === "under") chk.push(`During your test you rated the effort at your threshold as ${d.vt1Rpe} out of 20, which means "very light". Your body was actually working at a moderate level. Some people sense effort as lower than it is. Go by heart rate and the talk test, not by feel.`);
   if (r.perception === "over") chk.push(`During your test you rated the effort at your threshold as ${d.vt1Rpe} out of 20, harder than your body was actually working. This is common when breathlessness feels worrying. The heart rates in this plan are safe for you even when they feel hard.`);
   chk.push("Getting breathless during exercise is expected and is not harmful at these levels. It should settle within a few minutes of slowing down.");
-  S.push({ h: "Checking your effort", list: chk });
+  S.push({ h: "Checking your effort", cols: true, list: chk });
 
-  S.push({ h: "What to expect", list: [
+  S.push({ h: "What to expect", cols: true, list: [
     "First 2 weeks: your legs may feel tired or a little sore. This is normal and settles.",
     "After about a month: the same walk or ride should feel easier, and your heart rate will be lower at the same pace. Speed up a little to stay in your zone.",
     `By ${CONFIG.retestWeek} weeks: with regular training, fitness typically improves by 10 to 20 percent, and activities that made you breathless should feel easier.`,
@@ -619,7 +630,8 @@ function buildDoc(r) {
 function docHTML(doc) {
   let h = `<div><div class="doc-title">${esc(doc.title)}</div><div class="doc-sub">${esc(doc.sub)}</div></div>`;
   doc.sections.forEach(s => {
-    h += `<section${s.stop ? ' class="stop"' : ""}><h2>${esc(s.h)}</h2>`;
+    const cls = [s.stop ? "stop" : "", s.cols ? "cols2" : ""].filter(Boolean).join(" ");
+    h += `<section${cls ? ` class="${cls}"` : ""}><h2>${esc(s.h)}</h2>`;
     if (s.intro) h += `<p>${esc(s.intro)}</p>`;
     if (s.zones) {
       h += `<div class="zone-cards">` + s.zones.map(z => `<div class="zcard ${z.cls}"><div><div class="zname">${esc(z.name)}</div><div class="zhr">${esc(z.hr)}<small>beats per minute</small></div></div><dl>${z.rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>`).join("") + `</div>`;
@@ -760,7 +772,7 @@ const EVIDENCE = [
     p: "ACSM metabolic equations (ACSM's Guidelines for Exercise Testing and Prescription). Flat walking equation valid for 50–100 m/min; less accurate in obesity and with altered gait. The HR-to-VO2 mapping assumes linearity between rest, AT and peak. Treat as a starting pace and let HR correct it.",
     refs: [] },
   { h: "Issued at the end of the test, before interpretation", what: "Technician workflow", tag: ["judg", "Design choice"],
-    p: "Zones are anchored to AT, which does not depend on maximal effort, so they hold even when peak values are uncertain. Inputs are limited to measured values and chart facts; nothing requires interpretation. Safety concerns hold the prescription, desaturation limits it to the Start stage, and a low peak RER suppresses the percentile. AT chosen at the time of the test can move at interpretation; the report text asks for a reissue if it moves by more than 5 bpm.",
+    p: "Zones are anchored to AT, which does not depend on maximal effort, so they hold even when peak values are uncertain. Inputs are limited to measured values and chart facts; nothing requires interpretation. A standing 'do not issue' warning covers safety stops, desaturation limits it to the Start stage, and a low peak RER suppresses the percentile. AT chosen at the time of the test can move at interpretation; the report text asks for a reissue if it moves by more than 5 bpm.",
     refs: [] },
   { h: "Choices with no direct evidence", what: "Edit in CONFIG", tag: ["judg", "Clinical judgment"],
     p: `Steady band (AT HR minus ${CONFIG.modBand}); interval start (${Math.round(CONFIG.heavyLowFrac * 100)}% of the way from AT to RCP); the three stages and their move-on criteria; the strength exercise list; RPE cut-offs for flagging under- and overperception (below ${CONFIG.rpeUnder}, above ${CONFIG.rpeOver}).`,
@@ -800,12 +812,6 @@ function render() {
   } else {
     $("flagbox").innerHTML = (isExample ? `<div class="toolbar" style="margin-bottom:8px"><span class="chip-ex">Example patient, not real data</span></div>` : "") +
       (r.flags.length ? `<div class="flags">${r.flags.map(f => `<div class="flag">${esc(f)}</div>`).join("")}</div>` : "");
-    if (!r.d.safeOk) {
-      $("pane-patient").innerHTML = `<section class="panel"><h2>Prescription on hold</h2><p style="margin:8px 0 0;max-width:62ch">Confirm that the test ended without safety concerns before issuing. If the test stopped for chest pain, ischemic ECG changes, significant arrhythmia, an abnormal blood pressure response, or a near-faint, give no prescription today and route the study to the reading physician.</p></section>`;
-      $("pane-clin").innerHTML = "";
-      setTab(activeTab);
-      return;
-    }
     const doc = buildDoc(r);
     lastPatientText = docText(doc);
     lastClinText = clinText(r);
@@ -831,7 +837,7 @@ $("form").addEventListener("input", () => { isExample = false; render(); });
 $("form").addEventListener("change", () => render());
 $("form").addEventListener("submit", (e) => e.preventDefault());
 $("btnExample").addEventListener("click", () => { fill(EXAMPLE); isExample = true; render(); });
-$("btnClear").addEventListener("click", () => { fill({ sex: "female", safeOk: false, phen: [] }); isExample = false; render(); });
+$("btnClear").addEventListener("click", () => { fill({ sex: "female", phen: [] }); isExample = false; render(); });
 if (location.hash === "#evidence") activeTab = "ev";
 fill(EXAMPLE); isExample = true; render();
 </script>
